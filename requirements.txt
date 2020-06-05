@@ -2,3 +2,5 @@ requests
 gsheets
 python_dateutil
 setuptools
+git+https://github.com/ottomata/fec_python.git@31f7791
+
