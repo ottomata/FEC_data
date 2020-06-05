@@ -18,7 +18,7 @@ configuration.api_key['api_key'] = api_key
 configuration.host = 'https://api.open.fec.gov/v1'
 
 # create an instance of the DisbursementsApi API class
-disbusements_api = fec_client.DisbursementsApi(fec_client.ApiClient(configuration))
+disbursements_api = fec_client.DisbursementsApi(fec_client.ApiClient(configuration))
 
 
 #min_date = '2017-01-01' # date | Minimum date (optional)
@@ -28,7 +28,7 @@ two_year_transaction_period = [2018, 2020] # list[int] |  This is a two-year per
 
 
 try:
-    api_response = disbusements_api.schedules_schedule_b_get(api_key, committee_id=committee_id, sort=sort, two_year_transaction_period=two_year_transaction_period)
+    api_response = disbursements_api.schedules_schedule_b_get(api_key, committee_id=committee_id, sort=sort, two_year_transaction_period=two_year_transaction_period)
     pprint(api_response)
 except ApiException as e:
     print("Exception when calling DisbursementsApi->schedules_schedule_b_get: %s\n" % e)
