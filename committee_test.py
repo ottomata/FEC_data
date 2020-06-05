@@ -8,8 +8,9 @@ from pprint import pprint
 import swagger_client as fec_client
 from swagger_client.rest import ApiException
 
+import config
 
-api_key = 'qu9IQSkYHgSWbh0mPcIm445eWeQjTKeufNK79r9B' # str |  API key for https://api.data.gov. Get one at https://api.data.gov/signup.  (default to DEMO_KEY)
+api_key = config.api_key # str |  API key for https://api.data.gov. Get one at https://api.data.gov/signup.  (default to DEMO_KEY)
 
 # Configure API key authorization: apiKey
 configuration = fec_client.Configuration()
