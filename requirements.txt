@@ -1,0 +1,4 @@
+requests
+gsheets
+python_dateutil
+setuptools
