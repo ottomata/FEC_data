@@ -1,6 +1,10 @@
 from __future__ import print_function
 import time
 from pprint import pprint
+import json
+
+from collections import OrderedDict
+from dotted.collection import DottedDict
 
 # Rename swagger_client to something that makes sense:  fec_client
 # Ideally the fec_python swagger client code would call itself this,
@@ -22,14 +26,78 @@ configuration.host = 'https://api.open.fec.gov/v1'
 disbursements_api = fec_client.DisbursementsApi(fec_client.ApiClient(configuration))
 
 
-#min_date = '2017-01-01' # date | Minimum date (optional)
-committee_id = ['C00618389', 'C00637512'] # list[str] |  A unique identifier assigned to each committee or filer registered with the FEC. In general committee id's begin with the letter C which is followed by eight digits.  (optional)
-sort = '-disbursement_date' # str | Provide a field to sort by. Use - for descending order. (optional) (default to -disbursement_date)
-two_year_transaction_period = [2018, 2020] # list[int] |  This is a two-year period that is derived from the year a transaction took place in the Itemized Schedule A and Schedule B tables. In cases where we have the date of the transaction (contribution_receipt_date in schedules/schedule_a, disbursement_date in schedules/schedule_b) the two_year_transaction_period is named after the ending, even-numbered year. If we do not have the date  of the transaction, we fall back to using the report year (report_year in both tables) instead,  making the same cycle adjustment as necessary. If no transaction year is specified, the results default to the most current cycle.  (optional)
+
+# This is an ordered mapping of 'dotted' AKA nested key
+# names in a schedule_b result object record.
+# It explicitly maps the nested API results key to
+# the name of the column header we'll use for the google sheets api.
+# The column name values are only used when constructing the first
+# row to send to google sheets, as it will be used as the column header.
+dotted_result_keys_to_column_names = OrderedDict({
+    'committee_id': 'committee_id',
+    'file_number': 'file_number',
+    'line_number_label': 'line_number_label',
+    'committee.city': 'committee_city',
+    'committee.committee_type_full': 'committee_type_full',
+    'committee.name': 'committee_name'
+})
 
 
-try:
-    api_response = disbursements_api.schedules_schedule_b_get(api_key, committee_id=committee_id, sort=sort, two_year_transaction_period=two_year_transaction_period)
-    pprint(api_response)
-except ApiException as e:
-    print("Exception when calling DisbursementsApi->schedules_schedule_b_get: %s\n" % e)
+def get_schedule_b_results(
+    committee_id=['C00618389', 'C00637512'],
+    sort='-disbursement_date',
+    two_year_transaction_period=[2018, 2020]
+):
+    """
+    Gets the first page of schedule b results for the given parameters.
+    The returned value will be the list of result object records.
+    """
+    try:
+        api_response = disbursements_api.schedules_schedule_b_get(
+            api_key,
+            committee_id=committee_id,
+            sort=sort,
+            two_year_transaction_period=two_year_transaction_period
+        )
+        return api_response.to_dict()['results']
+    except ApiException as e:
+        print("Exception when calling DisbursementsApi->schedules_schedule_b_get: %s\n" % e)
+
+
+
+
+def schedule_b_results_to_rows(results):
+    """
+    Converts schedule_b result object records into a list of google sheet rows.
+    """
+
+    # Create an empty list of rows.  Each element in this list is a row.
+    rows = []
+
+    # Iterate over each result object in the list of results.
+    for result in results:
+        # Convert the result to a DottedDict so we can use nested dotted keys
+        # instead of having to look deeper into the nested structure.
+        # This lets us do e.g.
+        # result['committee.name'] instead of result['committee']['name']
+        result = DottedDict(result)
+
+        # Create an empty row.  Each element in this will be a cell value in google sheets.
+        row = []
+        # Iterate over each of our result keys in order.
+        for result_key in dotted_result_keys_to_column_names.keys():
+            # Use the dotted key to lookup the value we want and append it to the row.
+            row.append(result[result_key])
+
+        # Store the row we just created in our larger list of rows.
+        rows.append(row)
+
+    # Return all of the rows with the column name headers prepended as the first row.
+    column_header_row = list(dotted_result_keys_to_column_names.values())
+    return column_header_row + rows
+
+
+results = get_schedule_b_results()
+google_sheets_values = schedule_b_results_to_rows(results)
+
+pprint(google_sheets_values)
